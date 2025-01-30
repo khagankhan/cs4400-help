@@ -60,9 +60,9 @@ The arguments are passed to a function using the registers:
     %rdi, %rsi, %rdx, %rcx, %r8, %r9
 \end{verbatim}
 or using other parts of the registers like using \texttt{\%edi, \%esi, ...} \\
-or \texttt{\%dil, \%sil, ...}, etc. \\
+or \texttt{\%dil, \%sil, ...}, etc. based on the size of the value. If there are more than 6 arguments, the additional arguments are saved in stack. \\
 \\
-See an example here: \url{https://godbolt.org/z/c17r6r6co} \\
+See an example here: \url{https://godbolt.org/z/Yesv1Mo9d} \\
 
 \subsection{Calling Conventions - Callee and Caller saved registers}
 \label{sec: calle-caller-regs}
