@@ -10,7 +10,7 @@
 \usepackage{fancyvrb}
 \usepackage{tabularx}
 \usepackage{url}
-
+\usepackage{tikz}
 \pagestyle{myheadings}
 
 \begin{document}
@@ -49,7 +49,7 @@ For errors and additional information, please refer to the Acknowledgement secti
         \%r15  & \%r15d & \%r15w & \%r15b & Callee saved \\
         \hline
     \end{tabular}
-    \caption{Breakdown of x86-64 General Purpose Registers. Remember the register itself is 64-bit wide (0 - 63) . Certain parts of it has specific names. We do not have 64-bit \%rax, then additional 32-bit \%eax, etc. We have one 64-bit \%rax and the lower 4 bytes of it (32-bit) is called \%eax.}
+    \caption{Breakdown of x86-64 General Purpose Registers. Remember, the register itself is 64 bits wide (0–63). Certain portions of it have specific names. We do not have separate registers for 64-bit \%rax, 32-bit \%eax, etc. Instead, there is a single 64-bit \%rax register, and its lower 32 bits are referred to as \%eax.}
     \label{tab:x86_64_registers}
 \end{table}
 \clearpage
@@ -59,51 +59,50 @@ The arguments are passed to a function using the registers:
 \begin{verbatim}
     %rdi, %rsi, %rdx, %rcx, %r8, %r9
 \end{verbatim}
-or using other parts of the registers like using \texttt{\%edi, \%esi, ...} \\
-or \texttt{\%dil, \%sil, ...}, etc. based on the size of the value. If there are more than 6 arguments, the additional arguments are saved in stack. \\
-\\
+or by using other parts of these registers, such as \texttt{\%edi, \%esi, ...} or \texttt{\%dil, \%sil, ...}, depending on the size of the value. If there are more than six arguments, the additional arguments are stored on the stack. \\
 See an example here: \url{https://godbolt.org/z/Yesv1Mo9d} \\
 
 \subsection{Calling Conventions - Callee and Caller saved registers}
 \label{sec: calle-caller-regs}
-
-The ABI defines callee-saved registers as:\\
+%
+The ABI defines callee-saved registers as: \\
 \\
+%
 \textit{A function can use one of these registers if it saves it first. The function must restore the register’s original value before exiting.} \\
 \\
-This means the value of the register must be restored; in other words, it has the same value before and after a function call.
-
+%
+This means that the value of the register must be restored; in other words, it must have the same value before and after a function call. \\
+%
 \noindent For example:
 \begin{verbatim}
 mov $0, %rbp    # %rbp has value 0
 call fun_uses_rbp()
 cmpq $0, %rbp   # %rbp still has the same value 0.
 \end{verbatim}
-
-Since \texttt{\%rbp} is callee-saved, the function \texttt{fun\_uses\_rbp()} can use \texttt{\%rbp} but it must restore the previous value before exiting. That is why, \texttt{\%rbp} has the same value 0 before and after \texttt{fun\_uses\_rbp()}. \\
-
-On the other hand, caller-saved (or \textbf{not} callee-saved registers) registers' values can be different before and after a function call. Callee function is not responsible to save or restore the values; caller functions must save the values of them if they will need after function call.
-
+%
+Since \texttt{\%rbp} is callee-saved, the function \texttt{fun\_uses\_rbp()} can use \texttt{\%rbp}, but it must restore the previous value before exiting. That is why \texttt{\%rbp} has the same value (0) before and after the call to \texttt{fun\_uses\_rbp()}. \\
+%
+On the other hand, caller-saved (or \textbf{not} callee-saved) registers may have different values before and after a function call. The callee function is not responsible for saving or restoring their values; instead, the caller function must save their values if they are needed after the function call. \\
+%
 \noindent For example:
 \begin{verbatim}
 mov $0, %rax    # %rax has value 0
 call fun_uses_rax()
 cmpq $0, %rax   # %rax can have a different value 
 \end{verbatim}
-
-Since \texttt{\%rax} is not callee-saved, the function \texttt{fun\_uses\_rax()} is not responsible to restore the previous value of \texttt{\%rax} so, \texttt{\%rax} may have a different result.
-
+%
+Since \texttt{\%rax} is not callee-saved, the function \texttt{fun\_uses\_rax()} is not responsible for restoring its previous value. As a result, \texttt{\%rax} may hold a different value after the function call.
+%
 \subsection{Calling Conventions - More information}
-Register \texttt{\%rax} holds the return value.
-\noindent For example:
-\noindent The C code:
+Register \texttt{\%rax} holds the return value. \\
+\noindent For example, for the following C code:
 \begin{verbatim}
 long multiply(long a, long b) {
     long return_value = a * b;
     return return_value;
 }
 \end{verbatim}
-\noindent The assembly code generated:
+\noindent the following assembly code has been generated:
 \begin{verbatim}
 multiply:
         movq    %rdi, %rax
@@ -146,7 +145,10 @@ Register \texttt{\%rsp} is used as the stack pointer, a pointer to the topmost e
 
 \vspace{5pt}
 
-For each of the following lines of assembly language, determine the appropriate instruction suffix based on the operands. (For example, \texttt{mov} can be rewritten as \texttt{movb}, \texttt{movw}, \texttt{movl}, or \texttt{movq}.)
+For each of the following lines of assembly language, determine the appropriate instruction suffix based on the operands. (For example, \texttt{mov} can be rewritten as \texttt{movb}, \texttt{movw}, \texttt{movl}, or \texttt{movq}.) \\
+%
+\textbf{Hint:} Choose the suffixes that are compatible with the smaller-sized register. You can extract one byte from an 8-byte register, but you cannot extract 8 bytes from a 1-byte register.
+%
 
 \vspace{10pt}
 
@@ -157,8 +159,8 @@ mov__   $0xFF, %bl
 mov__   (%rsp,%rdx,4), %d1  
 mov__   (%rdx), %rax        
 mov__   %dx, (%rax)        
-\end{lstlisting}
-
+\end{lstlisting} 
+%
 \noindent\textbf{Related Problem 2} (Updated from Practice Problem 3.3)
 
 \vspace{5pt}
@@ -235,9 +237,12 @@ movl    $-1, %eax                    %rax = 00000000FFFFFFFF
 movq    $-1, %rax                    %rax = FFFFFFFFFFFFFFFF
 \end{lstlisting}
 
-That is why, \texttt{movl \$-1, \%eax} moves the value to \%eax and already \texttt{zero extends} (zeros out the upper 4 bytes) because of the conventions above. You can see \texttt{movl \%eax, \%eax}, which is a simple trick to zero out the upper bytes. \\
+That is why \texttt{movl \$-1, \%eax} moves the value to \%eax and automatically \texttt{zero-extends} (zeros out the upper 4 bytes) due to the conventions mentioned above. You may also see \texttt{movl \%eax, \%eax}, which is a simple trick to zero out the upper bytes.
 
-FWIW: Do not worry about \texttt{movabsq \$0x0011223344556677, \%rax}; it is just used to move really big numbers. When a 64-bit number can be represented as a 32-bit value, the compiler uses \texttt{mov}. If it cannot, then it actually uses \texttt{movabsq}. \texttt{movabsq} can have a register as a destination. It cannot write to the memory directly. \\
+\textbf{FWIW:} Do not worry about \texttt{movabsq \$0x0011223344556677, \%rax}; it is simply used to move very large numbers. When a 64-bit number can be represented as a 32-bit value, the compiler uses \texttt{mov}. If it cannot, then it uses \texttt{movabsq}. 
+
+\texttt{movabsq} can have a register as its destination, but it cannot write directly to memory. See an example here:
+\url{https://godbolt.org/z/bsvjGsf3G} \\
 \\
 Most of the time you will see \texttt{xorl \%eax, \%eax} that is used to zero out the \texttt{\%rax}. Based on the Table~\ref{truth-table} xoring the same value with itself will result in zero. Since zeroing \texttt{\%eax} also zeros out the upper 4 bytes, compiler chooses \texttt{xorl \%eax, \%eax} which is a cheaper than \texttt{movq \$0, \%rax}\\
 
@@ -359,10 +364,13 @@ You are given this function that casts a source value (\texttt{*sp}) and writes 
 \label{basic-arith}
 \end{table}
 
-As you notice, we do operation and write it in destination. Since sub operation subtract source from destination remember in a way that all of them takes D as first argument: \\
-add S D:  D = D + S (D comes first) \\
-sub S D:  D = D - S (D comes first) \\ 
-\\
+As you notice, an operation is performed, and the result is written to the destination. Remember that all of them take \texttt{D} as the first argument:
+
+\begin{verbatim}
+add S, D   # D = D + S  (D comes first)
+sub S, D   # D = D - S  (D comes first)
+\end{verbatim}
+
 \noindent
 \textbf{Related Problem 5} (Updated from Practice Problem 3.10)
 
@@ -405,26 +413,29 @@ First, let us remember the equation that is used to access certain parts of memo
     \caption{Operands can denote immediate (constant) values, register values, or values from memory. The scaling factor \( s \) must be either 1, 2, 4, or 8.}
     \label{equation_mem}
 \end{tcolorbox}
-
+%
 \noindent
-
-In Related Problem 6, we will apply our equation to determine the memory address, then \textit{dereference} that address to access the value stored at it.
-
-LEA instruction work the similar way, but it \textbf{DOES NOT DEREFERENCE} the memory.
-For example, imagine register \%rax has the value \texttt{0x10}. Additionally, the memory address \texttt{0x14} points to the value \texttt{0x20}. When we execute the instruction:
-
+%
+In Related Problem 6, we will apply our equation to determine the memory address and then \textit{dereference} that address to access the value stored at it.
+%
+The \texttt{LEA} instruction works in a similar way, but it \textbf{DOES NOT DEREFERENCE} the memory.
+For example, imagine that register \%rax holds the value \texttt{0x10}. Additionally, the memory address \texttt{0x14} contains the value \texttt{0x20}. When we execute the instruction:
+%
 \[
 \texttt{movq 4(\%rax), \%rsi}
 \]
-
-First, the \texttt{mov} instruction takes the value in \%rax, which is \texttt{0x10}. Then, based on the equation above,  it adds \texttt{4} to this value: \texttt{0x10 + 4 = 0x14}. After that, it dereferences the memory address \texttt{0x14}, which holds the value \texttt{0x20}, and moves this value into the \%rsi register.
+%
+First, the \texttt{mov} instruction takes the value in \%rax, which is \texttt{0x10}. Then, based on the equation above, it adds \texttt{4} to this value: \texttt{0x10 + 4 = 0x14}. After that, it dereferences the memory address \texttt{0x14}, which holds the value \texttt{0x20}, and moves this value into the \%rsi register. \\
+%
 If we use the \texttt{LEA} instruction instead:
+%
 \[
 \texttt{leaq 4(\%rax), \%rsi}
 \]
-The instruction computes \texttt{0x10 + 4 = 0x14} and moves this computed address directly into the \%rsi register without dereferencing the memory at \texttt{0x14}. As the name implies, \texttt{LEA} (Load Effective Address) loads the address, not the value at that address.
+%
+The instruction computes \texttt{0x10 + 4 = 0x14} and moves this computed address directly into the \%rsi register without dereferencing the memory at \texttt{0x14}. As the name implies, \texttt{LEA} (Load Effective Address) loads the address, not the value stored at that address. \\
 \\
-
+%
 \noindent\textbf{Related Problem 6} (Updated from Practice Problem 3.1) \\
 Assume the following values are stored at the indicated memory addresses and registers:
 
@@ -458,8 +469,9 @@ Assume the following values are stored at the indicated memory addresses and reg
     \end{tabular}
 \end{table}
 
-Compilers take advantage of \texttt{lea} to do arithmetic operations. For example, Related Problem 7 is an example where usage of the lea has nothing to do with the addresses but for arithmetic calculations: \\
+Compilers take advantage of \texttt{lea} to perform arithmetic operations. For example, Related Problem 7 demonstrates a case where the use of \texttt{lea} is unrelated to memory addresses but instead serves purely for arithmetic calculations: \\
 \\
+%
 \noindent\textbf{Related Problem 7}
 
 Consider the following code, in which we have omitted the expression being computed:
@@ -531,7 +543,7 @@ See the following example.
 This demonstrates that while \texttt{subq} updates the destination register (\%rbx), \texttt{cmpq} performs the same subtraction but only modifies the processor flags without changing the register contents. The same idea holds true for the \texttt{test} instruction, too.
 
 
-For example, suppose the \texttt{cmpl a b} instruction to perform that does \texttt{b - a}, where variables \texttt{a}, \texttt{b} are integers. Then the condition codes would be set according to the following C expressions:
+For example, suppose the \texttt{cmpl a b} instruction to perform that does \texttt{b - a}, where variables \texttt{a}, \texttt{b} are integers. Then the condition codes would be set according to the following C-like expressions:
 
 \begin{Verbatim}[frame=single]
 CF  (unsigned) b < (unsigned) a                Unsigned overflow
@@ -540,7 +552,9 @@ SF  ((b - a) < 0)                              Negative
 OF  (a < 0 && b > 0 && (b - a) < 0) || 
     (a > 0 && b < 0 && (b - a) > 0)            Signed overflow
 \end{Verbatim}
-
+\noindent\textbf{\textcolor{red}{Note:}} \\
+Please consider the above as a "C-like expression" rather than actual C code. The authors may have mistakenly applied a similar logic to C code. For more details, please refer to \texttt{Lec04.pdf}, slide number 83, and Solution 2.30 from the book of the mentioned edition in the Acknowledgment~\S\ref{sec:ack}. \\
+\\
 \noindent\textbf{Related Problem 8} \\
 It is easier to see a concept in smaller numbers, so we first consider 4-bit values for condition codes. The concept is the same, since 4-bit range is smaller it makes things easier. \\
 
@@ -603,7 +617,7 @@ For each case, compute the result of \texttt{cmp a b} and determine the values o
 \clearpage
 \noindent\textbf{Related Problem 9}  \\
 From \textbf{Related Problem 8}, for each case, compute the result of \texttt{add a b} (Use Table~\ref{four-bit-int} as a reference) and determine the values of the same flags (In the \textbf{Related Problem 8} you used the conditions for \texttt{cmp a b} now you are supposed to work with \texttt{add a b}.) \\ 
-First, try to write condition codes for \texttt{add a b}: \\
+First, try to write C-like expressions for \texttt{add a b} for the given flags: \\
 
 \begin{Verbatim}[frame=single]
 CF                                             Unsigned overflow
@@ -613,7 +627,7 @@ OF
                                                Signed overflow
 \end{Verbatim}
 
-Then, determine the value of the flags for the following (Numbers are still \textbf{4-bit numbers}): \\
+Then, determine the value of the flags after the operation \texttt{add a, b} for the following (Numbers are still \textbf{4-bit numbers}): \\
 \begin{enumerate}
     \item $a = 5$, $b = 3$
     \item $a = 7$, $b = -6$
@@ -624,11 +638,12 @@ Then, determine the value of the flags for the following (Numbers are still \tex
 
 \noindent\textbf{Note:}  
 
-As discussed in the lecture, Prof. Dr. Regehr suggested a simpler approach to handling flags:  
+As discussed in the lecture, Prof. Dr. Regehr suggested a simpler approach to handling flags: \\
+\\
+\textit{Cast register values to a signed 64-bit integer type, perform the arithmetic operation, and then compare the result against \texttt{INT\_MIN} and \texttt{INT\_MAX}. However, ensure that when casting to the larger type, the conversion correctly sign-extends rather than zero-extends.} \\
+\\
+This approach may be easier to implement. You can apply the same concept to the above Related Problems (Related Problem 8 and Related Problem 9). Since the numbers in those problems are 4-bit values, you can extend them to 8-bit and perform the comparison accordingly.
 
-\textit{Cast register values to a signed 64-bit integer type, perform the arithmetic operation, and then compare the result against INT\_MIN and INT\_MAX. However, ensure that when casting to the larger type, the conversion correctly sign-extends rather than zero-extends.} \\
-
-This may be easier. You can use the same concept for the above Related Problems (Related Problem 8 and Related Problem 9). Since the numbers in those problems are 4-bits you can extend them to 8-bit and do comparison. \\
 \clearpage
 \subsection{Usage of Flags}
 
@@ -836,10 +851,14 @@ test:
 
 \noindent\textit{Answer: }\url{https://godbolt.org/z/TWezeEM6d} \\
 \\
-As we know, \texttt{jmp} instructions are used for loops since there is no explicit loop instructions at the assembly level: \\
-1) Compare the condition (check loop condition) \\
-2) If not met, jump back (to loop body) \\
-3) If met, do not jump back and execute instuctions after jump (execute code after loop body).\\
+As we know, \texttt{jmp} instructions are used for loops since there are no explicit loop instructions at the assembly level:
+
+\begin{enumerate}
+    \item Compare the condition (check loop condition).
+    \item If the condition is not met, jump back to the loop body.
+    \item If the condition is met, do not jump back and execute the instructions after the jump (execute code after the loop body).
+\end{enumerate}
+
 
 \noindent\textbf{Related Problem 13} \\
 \begin{verbatim}
@@ -927,6 +946,552 @@ The compiler generates the following assembly code:
 Based on the assembly code, complete the given C code. \\
 
 \noindent\textit{Answer: }\url{https://godbolt.org/z/3GWE8bves} \\
+
+\section{Switch case and Jump tables}
+Compilers translate \texttt{switch} statements into \textbf{jump tables} when cases are dense. 
+The best way is to look at an example. 
+\\
+For the given example below, instead of multiple comparisons, an index (\texttt{n - 100}) maps directly to an entry in \texttt{.L4}. For example, \texttt{case 104:} lacks a \texttt{break}, so it \textbf{falls through} to \texttt{case 106:}, meaning both use the same \texttt{.L3} label in assembly. The \textbf{default case} is \texttt{.L8}, where out-of-range values jump, setting \texttt{x = 0}. \textbf{Bias correction} is needed because \texttt{switch} cases may not start at 0; the compiler subtracts 100 (\texttt{subq \$100, \%rsi}) to normalize indexing, ensuring efficient lookups in the jump table; so the index may start from zero not from 100. \\
+\\
+Please carefully examine the following example, click the \textit{Compiler Explorer link }(\url{https://godbolt.org/z/EoPx6zooT}) and play with the source code to see how it compiles to a jump table. \\
+
+\begin{verbatim}
+void switch_case(long x, long n, long *dest)
+{
+    switch (n) {
+        case 100: //  .L7
+            x += 1;
+            break;
+        // Missing case 101: goes to default .L8
+        case 102: // quad .L6
+            x += 2;
+            break;
+        case 103: // .L5
+            x += 3;
+            break;
+        case 104:
+            /* Fall through  to case 106: which is .L3 */
+        // Missing case 105: gos to default .L8
+        case 106: // .L3
+            x += 4;
+            break;
+        default:
+            x = 0;
+    }
+    *dest = x;
+}
+\end{verbatim}
+The code above compiles to:
+\begin{verbatim}
+ switch_case:
+        subq    $100, %rsi    # Add bias so it starts from 0: 
+        cmpq    $6, %rsi      # Max case number 106 now is 6;
+                              # 6 = 106- 100 because of above bias
+        ja      .L8           # If more than 6 jump to default case .L8
+        jmp     *.L4(,%rsi,8) # Otherwise jump to the table to select
+.L4:
+        .quad   .L7 # Case 100 jumps to .L7
+        .quad   .L8 # Case 101 is missing; jmp to default
+        .quad   .L6 # Case 102 jumps to .L6
+        .quad   .L5 # Case 103 jumps to .L5
+        .quad   .L3 # Case 104 falls through to case 6
+        .quad   .L8 # Case 105 is missing; jmp to default
+        .quad   .L3 # Case 106 jumps to .L3 like case 104 did because of fall through
+.L7:
+        addq    $1, %rdi     # x+= 1;
+        jmp     .L2
+.L6:
+        addq    $2, %rdi     # x+= 2;
+        jmp     .L2
+.L5:
+        addq    $3, %rdi     # x+= 3;
+        jmp     .L2
+.L3:
+        addq    $4, %rdi     # x+= 4;
+.L2:
+        movq    %rdi, (%rdx) # *dest = x;
+        ret
+.L8:
+        movl    $0, %edi     # x = 0;
+        jmp     .L2
+\end{verbatim}
+
+See the source code here: \url{https://godbolt.org/z/EoPx6zooT} \\
+\\
+\clearpage
+\noindent\textbf{Related Problem 15} \\
+The \texttt{switch\_case} example above specifies that any value less than zero must go to the default case. However, there is no explicit handling of negative values in the assembly code. 
+
+Explain how the assembly code handles these cases.\\ 
+\\
+\noindent\textbf{Related Problem 16} (Updated from Practice Problem 3.31) \\
+Complete the following C code based on the assembly code given.\\
+The given C code
+\begin{verbatim}
+    void switcher(long a, long b, long c, long *dest)
+{
+    long val;
+    switch(a) {
+    case ___:
+        c = ___;
+        break;
+    case ___:
+        val = ___;
+        break;
+    case ___:
+        /* Fall through */
+    case ___:
+        val = ___;
+        break;
+    case ___:
+        val = ___;
+        break;
+    default:
+        val = ___; 
+    }
+    *dest = val; 
+}
+\end{verbatim}
+compiles to the following assembly code:
+\begin{verbatim}
+    switcher:
+        cmpq    $7, %rdi
+        ja      .L5
+        jmp     *.L4(,%rdi,8)
+.L4:
+        .quad   .L7
+        .quad   .L5
+        .quad   .L3
+        .quad   .L5
+        .quad   .L6
+        .quad   .L8
+        .quad   .L5
+        .quad   .L3
+.L6:
+        movq    %rdi, %rsi
+        jmp     .L5
+.L7:
+        leaq    112(%rdx), %rsi
+        jmp     .L5
+.L3:
+        addq    %rdx, %rsi
+        salq    $2, %rsi
+.L5:
+        movq    %rsi, (%rcx)
+        ret
+.L8:
+        movl    $0, %esi
+        jmp     .L5
+\end{verbatim}
+
+\textit{Answer: }\url{https://godbolt.org/z/cnaGd5no3}
+\clearpage
+\section{Nested Arrays}
+ The array elements are ordered in memory in row-major order, meaning all elements of row 0, which can be written A[0], followed by all elements of row 1 (A[1]), and so on. In other words, since the memory is one dimensional, nested arrays in C programming language are saved in a \textit{row-major} order in the memory. Figure~\ref{fig:nested_array} demonstrates how 2-D array \texttt{arr[3][4]} is saved in the memory in a row-major order. \\
+ \\
+ If an array is declared as:
+\[
+\text{Type } A[R][C];
+\]
+where \textit{Type} can be \texttt{char}, \texttt{int}, \texttt{long}, etc., the \textbf{memory address} of an element \( A[i][j] \) in a row-major order layout is calculated as:
+
+\begin{equation}
+A[i][j] = A + \text{sizeof}(\text{Type}) \times (C \times i + j)
+\end{equation}
+
+ \begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{images/nested_arrays.pdf}
+    \caption{Nested Array Diagram. In C arrays are saved in \textit{row-major} order}
+    \label{fig:nested_array}
+\end{figure}
+\\
+\noindent Let us consider the array in Figure~\ref{fig:nested_array} as an example: \\
+Given the declaration:
+
+\[
+\texttt{char arr[3][4];}
+\]
+
+where \texttt{char} has \(\text{sizeof}(\texttt{char}) = 1\) byte, the memory address of \(\texttt{arr[1][2]}\) is:
+
+\begin{align*}
+arr[2][3] &= arr + \text{sizeof}(\text{Type}) \times (C \times i + j) \\
+        &= arr + 1 \times (4 \times 1 + 2) \\
+        &= arr + 1 \times (4 + 2) \\
+        &= arr + 6
+\end{align*}
+
+Thus, \(\texttt{arr[1][2]}\) is located 6 bytes after the base address \( arr \).
+Since the array starts at address \texttt{0x0} from the figure, we need the element at address 6 which is 56. \\
+\\
+\noindent Let us consider another example, \\
+
+Given the declaration:
+
+\[
+\texttt{int arr[4][5];}
+\]
+
+where \texttt{int} has \(\text{sizeof}(\texttt{int}) = 4\) bytes, we want to find the equivalent \(\texttt{arr[i][j]}\) corresponding to \(\texttt{((int *)arr)[17]}\).
+
+\(\texttt{((int *)arr)[17]}\) means that we cast our 2-D array, to one dimensional integer array. The memory offset of the \texttt{arr[17]} is \texttt{ 17 * sizeof(int)} which is 68. Remember, the equation above is used for the \textbf{memory address} of an element \( A[i][j] \) in a row-major order layout.\\
+Now we can apply our equation:
+
+\begin{align*}
+arr[i][j] &= arr + \text{sizeof}(int) \times (C \times i + j) \\
+        &= arr + 4 \times (5 \times i + j) \\
+        &= arr + 20 \times i + 4 \times j
+\end{align*}
+Since the offset is 68 it means that \[
+20 \times i + 4 \times j
+\] 
+must be equal to \texttt{68} we get \texttt{i = 3} and \texttt{j = 2} using through the following: 
+
+\begin{align*}
+20 \times i + 4 \times j &= 68
+\end{align*}
+
+Solving for \( i \):
+
+\begin{align*}
+i &= \frac{68}{20} = 3 \quad \text{(integer division)}
+\end{align*}
+
+Solving for \( j \):
+
+\begin{align*}
+j &= 68 \mod 20 = 4 \times j \\
+  &=> 8 = 4 \times j \\
+  &=> j = 2
+\end{align*}
+
+Thus, the equivalent array access form is:
+\[
+\texttt{arr[3][2]}
+\]
+\\
+You may not need to memorize the equation. Once you understand how nested arrays are stored in \textit{row-major} order, as shown in Figure~\ref{fig:nested_array}, you can easily visualize the memory layout and determine the answer quickly. 
+
+Using the equation is fine as long as you correctly implement \textit{pointer arithmetic} when necessary.
+
+As examples of pointer arithmetic, consider the following declarations:
+
+\begin{verbatim}
+char    A[12];
+char   *B[8];
+int     C[6];
+double *D[5];
+\end{verbatim}
+
+These declarations will generate arrays with the following parameters:
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{c c c c c}
+        \toprule
+        \textbf{Array} & \textbf{Element size} & \textbf{Total size} & \textbf{Start address} & \textbf{Element i} \\
+        \midrule
+        A & 1  & 12  & \( x_A \)  & \( x_A + i \) \\
+        B & 8  & 64  & \( x_B \)  & \( x_B + 8i \) \\
+        C & 4  & 24  & \( x_C \)  & \( x_C + 4i \) \\
+        D & 8  & 40  & \( x_D \)  & \( x_D + 8i \) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\noindent\textbf{Related Problem 17} (Updated from Practice Problem 3.38) \\
+Based on the provided assembly code, find the values of \texttt{M} and \texttt{N} for the given C code below:
+\begin{verbatim}
+long P[M][N];
+long Q[N][M];
+
+long sum_element(long i, long j) {
+    return P[i][j] + Q[j][i];
+}
+\end{verbatim}
+The assembly code:
+\begin{verbatim}
+    sum_element:
+        leaq    (%rdi,%rdi,2), %rdx
+        addq    %rsi, %rdx
+        leaq    (%rsi,%rsi,4), %rax
+        addq    %rdi, %rax
+        movq    Q(,%rax,8), %rax
+        addq    P(,%rdx,8), %rax
+        ret
+\end{verbatim}
+\\
+\texttt{M} is: \_\_\_ \\
+\texttt{N} is: \_\_\_ \\
+\\
+\textit{Answer: }\url{https://godbolt.org/z/68b4fEc38} \\
+\clearpage
+\section{Heterogeneous data structures}
+\subsection{Struct}
+Different ways to declare the structure: \\
+\\
+\noindent
+\begin{minipage}{0.45\textwidth}
+\begin{verbatim}
+// Standard struct declaration
+struct rec {
+    int i;
+    int j;
+    int a[2];
+    int *p;
+};
+\end{verbatim}
+\end{minipage}
+\hfill
+\begin{minipage}{0.45\textwidth}
+\begin{verbatim}
+// Using typedef with struct
+typedef struct rec_t {
+    int i;
+    int j;
+    int a[2];
+    int *p;
+} rec_t;
+\end{verbatim}
+\end{minipage}
+
+\vspace{1em}
+
+\noindent
+\begin{minipage}{0.45\textwidth}
+\begin{verbatim}
+// Anonymous struct with typedef
+typedef struct {
+    int i;
+    int j;
+    int a[2];
+    int *p;
+} rec_anonymous;
+\end{verbatim}
+\end{minipage}
+
+\vspace{1em}
+
+This structure contains four fields: two 4-byte values of type \texttt{int}, a two-element array of type \texttt{int}, and an 8-byte integer pointer, giving a total of 24 bytes:
+
+\begin{table}[h]
+    \centering
+    \renewcommand{\arraystretch}{1.5}
+    \begin{tabular}{c c c c c c}
+        \toprule
+        \textbf{Offset} & 0 & 4 & 8 & 16 & 24 \\
+        \midrule
+        \textbf{Contents} & \texttt{i} & \texttt{j} & \texttt{a[0]} & \texttt{a[1]} & \texttt{p} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+\subsection{Padding}
+Fields of a \texttt{struct} in C are stored in the order in which they are declared, and the C standard specifies that this order cannot be rearranged in memory. Additionally, many computer systems impose alignment restrictions on \textbf{primitive} data types, requiring that certain objects be placed at addresses that are multiples of a specific value \( K \) (typically 2, 4, or 8). These alignment constraints simplify the design of hardware that interfaces between the processor and the memory system. To satisfy these alignment requirements, padding may be inserted between \texttt{struct} members. \\
+\\
+\clearpage
+The easiest way to determine padding follows two rules:
+
+\begin{enumerate}
+    \item Starting from address zero check if the offset where a variable starts is divisible by the size of its type:
+    \begin{itemize}
+        \item If yes, place it without adding any padding.
+        \item If no, round up to the nearest multiple by adding padding.
+    \end{itemize}
+    
+    \item After placing all fields, check the total size of the struct:
+    \begin{itemize}
+        \item Is the total size divisible by the largest data type's size?
+        \item If not, round it up to the nearest multiple by adding padding.
+    \end{itemize}
+\end{enumerate}
+\\
+Let us consider the following example:
+
+\noindent\begin{minipage}{0.45\textwidth}
+\begin{lstlisting}
+typedef struct {
+    short a; 
+    double b;
+    int c;
+} my_struct, *p_my_struct;
+\end{lstlisting}
+\end{minipage}
+
+We have declared \texttt{my\_struct} and \texttt{p\_my\_struct}, which is a pointer to \texttt{my\_struct}. The size of \texttt{p\_my\_struct} is always 8 bytes, as it is a pointer. This is the same as declaring a variable of type \texttt{my\_struct*}. Writing \texttt{p\_my\_struct a;} and \texttt{my\_struct* a;} are equivalent.
+
+Now, let's determine the memory layout of \texttt{my\_struct} using Rule 1.
+
+\begin{enumerate}
+    \item \textbf{Starting at address 0:}  
+    Is 0 divisible by the size of \texttt{short} (2 bytes)?  
+    Yes, because \( 0 \mod 2 = 0 \).  
+    We place \texttt{a} at address 0, occupying 2 bytes.
+
+    \item \textbf{Next, adding \texttt{double b}:}  
+    The next available address is 2.  
+    Is 2 divisible by the size of \texttt{double} (8 bytes)?  
+    No, because \( 2 \mod 8 \neq 0 \).  
+    To align \texttt{b} properly, we add 6 bytes of padding.  
+    Now, \texttt{b} starts at address 8 and occupies 8 bytes.  
+    The next available address is \( 8 + 8 = 16 \).
+
+    \item \textbf{Adding \texttt{int c}:}  
+    Is 16 divisible by the size of \texttt{int} (4 bytes)?  
+    Yes, because \( 16 \mod 4 = 0 \).  
+    We place \texttt{c} at address 16, occupying 4 bytes.  
+    The total struct size at this point is \( 16 + 4 = 20 \) bytes.
+
+\end{enumerate}
+
+Now, applying Rule 2:
+
+\begin{itemize}
+    \item The largest data type in the struct is \texttt{double} (8 bytes).
+    \item Is the total struct size (20 bytes) divisible by 8?  
+    No, because \( 20 \mod 8 \neq 0 \).
+    \item To satisfy alignment requirements, we add 4 bytes of padding at the end to make the total size 24, which is divisible by 8.
+\end{itemize}
+
+\textbf{Final Struct Layout:}
+
+\begin{verbatim}
+// | a | padding(6) | b       | c  | padding(4) |
+// ^0  ^2          ^8        ^16  ^20          ^24
+\end{verbatim}
+
+Thus, the final size of \texttt{my\_struct} is \textbf{24 bytes}. \\
+See this code and see the output for the same struct: \\
+
+\url{https://godbolt.org/z/anrTEceE1}\\
+
+\\
+\\
+Please carefully analyze the following examples and understand. They also include nested structs. You can run the examples below here: \url{https://godbolt.org/z/YzohaaoEz} \\
+\\
+\noindent\begin{minipage}{0.29\textwidth}
+\begin{lstlisting}
+typedef struct {
+    short a; 
+    int b;
+    int* c;
+    short* d;
+} p1;  
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.29\textwidth}
+\begin{verbatim}
+// | a | padding(2) | b | c | d |
+//   ^2             ^4  ^8   ^16 
+// size = 16 + 8 (short* d) = 24
+\end{verbatim}
+\end{minipage}
+
+\vspace{1em}
+
+\noindent\begin{minipage}{0.29\textwidth}
+\begin{lstlisting}
+typedef struct {
+    int a[2];
+    char b[8];
+    short c[4];
+    long* d;
+} p2;
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.29\textwidth}
+\begin{verbatim}
+// | a[0] | a[1] | b[0] | b[1] | ... | b[7] | c[0] | ... | c[3] | d
+// ^0     ^4     ^8     ^9     ^10          ^16     ^18         ^24
+// size = 24 + 8 (long* d) = 32
+\end{verbatim}
+\end{minipage}
+
+\vspace{1em}
+
+\noindent\begin{minipage}{0.29\textwidth}
+\begin{lstlisting}
+typedef struct {
+    long a[2];
+    int* b[2];
+} p3;
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.29\textwidth}
+\begin{verbatim}
+// | a[0] | a[1] | b[0] | b[1]
+// ^0     ^8     ^16    ^24
+// size = 24 + 8(b[1]) = 32
+\end{verbatim}
+\end{minipage}
+
+\vspace{1em}
+
+\noindent\begin{minipage}{0.29\textwidth}
+\begin{lstlisting}
+typedef struct {
+    char a[16];
+    char* b[2];
+} p4, *p_p4;
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.29\textwidth}
+\begin{verbatim}
+// | a[0] | a[1] | .... | a[15] | b[0] | b[1] 
+// ^0     ^1     ^2     ^15     ^16    ^24
+// size = 24 + 8(b[1]) = 32
+\end{verbatim}
+\end{minipage}
+
+\vspace{1em}
+
+\noindent\begin{minipage}{0.29\textwidth}
+\begin{lstlisting}
+typedef struct {
+    p4 a[4];
+    p1 b;
+} p5;
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.29\textwidth}
+\begin{verbatim}
+// | a[0] | a[1] | a[2] | a[3] | b
+// ^0     ^32    ^64    ^96     ^128 
+// size = 128 + 24(b) = 152
+\end{verbatim}
+\end{minipage}
+
+\vspace{1em}
+
+\noindent\begin{minipage}{0.29\textwidth}
+\begin{lstlisting}
+typedef struct {
+    int a;
+    int b;
+    long c;
+    char d;
+    char e;
+} p6;
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.29\textwidth}
+\begin{verbatim}
+// | a | b | c | d | e |
+// ^0  ^4  ^8  ^16  ^17
+// size = 17 + 7 (!!! The total structure size must be a multiple
+// of the largest alignment)
+// In our case long is the largest member. 
+// Total size must be 24 (rounded up to the nearest multiple of 8).
+\end{verbatim}
+\end{minipage}
+\\
+\noindent\textbf{Note:} \\
+As you may notice, alignment and our struct padding rules are based on primitive data types. This is why, in the case of \texttt{p5}, we did not apply our rule that checks whether 128 (the size of \texttt{p4 a[4]}) is divisible by 24 (the size of \texttt{p1 b}). Instead, we applied padding based on the alignment requirements of the individual fields.
+
+Additionally, we did not apply our second rule, which checks whether the total size is divisible by the size of the largest field. In this case, the largest field is \texttt{p4}, which has a size of 32 bytes, but the total struct size of 152 is not divisible by 32. Again, this is because we align based on primitive data types.
+
+Since structs do not exist at the assembly level, you can think of nested structs as being "unrolled" into memory, where each nested struct is treated as a contiguous block before aligning the next field.
+v
 
 \section{Acknowledgement}. \\
 \label{sec:ack}
