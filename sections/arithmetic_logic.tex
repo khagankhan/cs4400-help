@@ -4,19 +4,11 @@
     \centering
     \small
     \renewcommand{\arraystretch}{1.2}
-    \caption{Common arithmetic and logical instructions in x86-64. The \texttt{leaq} 
-    (Load Effective Address) instruction is commonly used to perform simple arithmetic. 
-    The remaining ones are more standard unary or binary operations. We use the notation 
-    \texttt{>>} for right shifts, with signed values using \textit{arithmetic right shift} 
-    (`SAR`) and unsigned values using \textit{logical right shift} (`SHR`). Logical right 
-    shift puts ZEROS to the beginning while Arithmetic right shift puts the SIGN BIT (0 or 1)
-     to the beginning. Additionally, all of them set the condition flags except \texttt{lea}.}
-    \label{basic-arith}
     \begin{tabular}{l l l}
         \toprule
         \textbf{Instruction} & \textbf{Effect} & \textbf{Description} \\
         \midrule
-        \texttt{leaq} $S, D$  & $D \leftarrow \&S$ & Load effective address \\
+        \texttt{leaq} $S, D$  &  (Do some arithmetic)  & Load effective address \\
         \midrule
         \texttt{INC} $D$  & $D \leftarrow D+1$ & Increment \\
         \texttt{DEC} $D$  & $D \leftarrow D-1$ & Decrement \\
@@ -36,6 +28,14 @@
         \texttt{SHR} $k, D$  & $D \leftarrow D >>_L k$ & Logical right shift \\
         \bottomrule
     \end{tabular}
+    \caption{Common arithmetic and logical instructions in x86-64. The \texttt{leaq} 
+    (Load Effective Address) instruction is commonly used to perform simple arithmetic. 
+    The remaining ones are more standard unary or binary operations. We use the notation 
+    \texttt{>>} for right shifts, with signed values using \textit{arithmetic right shift} 
+    (`SAR`) and unsigned values using \textit{logical right shift} (`SHR`). Logical right 
+    shift puts ZEROS to the beginning while Arithmetic right shift puts the SIGN BIT (0 or 1)
+     to the beginning. Additionally, all of them set the condition flags except \texttt{lea}.}
+    \label{basic-arith}
 \end{table}
 
 
@@ -118,9 +118,7 @@ If we use the \texttt{LEA} instruction instead:
 \]
 %
 The instruction computes \texttt{0x10 + 4 = 0x14} and moves this computed address 
-directly into the \%rsi register without dereferencing the memory at \texttt{0x14}. 
-As the name implies, \texttt{LEA} (Load Effective Address) loads the address, not 
-the value stored at that address. \\
+directly into the \%rsi register without dereferencing the memory at \texttt{0x14}. \\ 
 \\
 %
 \noindent\textbf{Related Problem 6} (Updated from Practice Problem 3.1) \\
