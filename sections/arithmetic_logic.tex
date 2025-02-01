@@ -1,0 +1,190 @@
+\section{Arithmetic and Logical Operations}
+\subsection{Basic operations}
+\begin{table}[h]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \caption{Common arithmetic and logical instructions in x86-64. The \texttt{leaq} 
+    (Load Effective Address) instruction is commonly used to perform simple arithmetic. 
+    The remaining ones are more standard unary or binary operations. We use the notation 
+    \texttt{>>} for right shifts, with signed values using \textit{arithmetic right shift} 
+    (`SAR`) and unsigned values using \textit{logical right shift} (`SHR`). Logical right 
+    shift puts ZEROS to the beginning while Arithmetic right shift puts the SIGN BIT (0 or 1)
+     to the beginning. Additionally, all of them set the condition flags except \texttt{lea}.}
+    \label{basic-arith}
+    \begin{tabular}{l l l}
+        \toprule
+        \textbf{Instruction} & \textbf{Effect} & \textbf{Description} \\
+        \midrule
+        \texttt{leaq} $S, D$  & $D \leftarrow \&S$ & Load effective address \\
+        \midrule
+        \texttt{INC} $D$  & $D \leftarrow D+1$ & Increment \\
+        \texttt{DEC} $D$  & $D \leftarrow D-1$ & Decrement \\
+        \texttt{NEG} $D$  & $D \leftarrow -D$ & Negate \\
+        \texttt{NOT} $D$  & $D \leftarrow \sim D$ & Complement \\
+        \midrule
+        \texttt{ADD} $S, D$  & $D \leftarrow D + S$ & Add \\
+        \texttt{SUB} $S, D$  & $D \leftarrow D - S$ & Subtract \\
+        \texttt{IMUL} $S, D$  & $D \leftarrow D * S$ & Multiply \\
+        \texttt{XOR} $S, D$  & $D \leftarrow D  \texttt{\string^} S$ & Exclusive-or \\
+        \texttt{OR} $S, D$  & $D \leftarrow D | S$ & Or \\
+        \texttt{AND} $S, D$  & $D \leftarrow D \& S$ & And \\
+        \midrule
+        \texttt{SAL} $k, D$  & $D \leftarrow D << k$ & Left shift \\
+        \texttt{SHL} $k, D$  & $D \leftarrow D << k$ & Left shift (same as \texttt{SAL}) \\
+        \texttt{SAR} $k, D$  & $D \leftarrow D >>_A k$ & Arithmetic right shift \\
+        \texttt{SHR} $k, D$  & $D \leftarrow D >>_L k$ & Logical right shift \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+
+As you notice, an operation is performed, and the result is written to the destination. 
+Remember that all of them take \texttt{D} as the first argument:
+
+\begin{verbatim}
+add S, D   # D = D + S  (D comes first)
+sub S, D   # D = D - S  (D comes first)
+\end{verbatim}
+
+\noindent
+\textbf{Related Problem 5} (Updated from Practice Problem 3.10)
+
+\begin{lstlisting}
+short calc(short a, short b, short c) {
+
+    short d = ______;
+    short e = ______;
+    short f = ______;
+    short g = ______;
+    return g;
+    
+}
+\end{lstlisting}
+
+The generated assembly code implementing these expressions is as follows:
+
+\begin{lstlisting}
+calc:
+    movl    %esi, %eax
+    orl     %esi, %edi
+    sarw    $11, %di
+    notl    %edi
+    subl    %edi, %eax
+    ret
+\end{lstlisting}
+
+\noindent
+\textbf{Based on this assembly code, fill in the missing portions of the C code above.} \\
+\\
+\textit{Answer: }~\url{https://godbolt.org/z/aq9h3G8h8}
+\subsection{LEA (Load effective address)}
+First, let us remember the equation that is used to access certain parts of memory:
+\noindent 
+\\
+\begin{tcolorbox}[colframe=black, colback=white, boxrule=1pt, title=Scaled Indexed Addressing Mode]
+    \tcbtitle{Operands can denote immediate (constant) values, register values, or values 
+    from memory. The scaling factor \( s \) must be either 1, 2, 4, or 8.}
+    \begin{equation*}
+        \text{Memory} \quad \textit{Imm}(r_b, r_i, s) = M[\textit{Imm} + R[r_b] + R[r_i] \cdot s]
+    \end{equation*}
+    \label{equation_mem}
+\end{tcolorbox}
+%
+\noindent
+%
+In Related Problem 6, we will apply our equation to determine the memory address and 
+then \textit{dereference} that address to access the value stored at it.
+%
+The LEA instruction uses the same equation for the calculation, but it 
+\textbf{does not access memory} or \textbf{dereference the pointer}.
+
+For example, imagine that register \%rax holds the value \texttt{0x10}. Additionally, 
+the memory address \texttt{0x14} contains the value \texttt{0x20}. When we execute the 
+instruction:
+%
+\[
+\texttt{movq 4(\%rax), \%rsi}
+\]
+%
+First, the \texttt{mov} instruction takes the value in \%rax, which is \texttt{0x10}. 
+Then, based on the equation above, it adds \texttt{4} to this value: \texttt{0x10 + 4 = 0x14}. 
+After that, it dereferences the memory address \texttt{0x14}, which holds the value \texttt{0x20}, and moves this value into the \%rsi register. \\
+%
+If we use the \texttt{LEA} instruction instead:
+%
+\[
+\texttt{leaq 4(\%rax), \%rsi}
+\]
+%
+The instruction computes \texttt{0x10 + 4 = 0x14} and moves this computed address 
+directly into the \%rsi register without dereferencing the memory at \texttt{0x14}. 
+As the name implies, \texttt{LEA} (Load Effective Address) loads the address, not 
+the value stored at that address. \\
+\\
+%
+\noindent\textbf{Related Problem 6} (Updated from Practice Problem 3.1) \\
+Assume the following values are stored at the indicated memory addresses and registers:
+
+\begin{table}[h!]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{ll ll}
+        \toprule
+        \textbf{Address} & \textbf{Value} & \textbf{Register} & \textbf{Value} \\
+        \midrule
+        0x100 & 0xFF  & \%rax & 0x100 \\
+        0x104 & 0xAB  & \%rcx & 0x1 \\
+        0x108 & 0x13  & \%rdx & 0x3 \\
+        0x10C & 0x11  & & \\
+        \midrule
+        \multicolumn{4}{l}{\textbf{Fill in the following values for the indicated 
+        operands (Use Equation~\ref{equation_mem}):}} \\
+        \midrule
+        \textbf{Operand} & \textbf{Value (not used LEA)} & \textbf{Value (used LEA)} \\
+        \midrule
+        \%rax & \underline{\hspace{3cm}} & \underline{\hspace{3cm}} \\
+        0x104 & \underline{\hspace{3cm}} & \underline{\hspace{3cm}} \\
+        \$0x108 & \underline{\hspace{3cm}} & \underline{\hspace{3cm}} \\
+        (\%rax) & \underline{\hspace{3cm}} & \underline{\hspace{3cm}} \\
+        4(\%rax) & \underline{\hspace{3cm}} & \underline{\hspace{3cm}} \\
+        9(\%rax,\%rdx) & \underline{\hspace{3cm}} & \underline{\hspace{3cm}} \\
+        260(\%rcx,\%rdx) & \underline{\hspace{3cm}} & \underline{\hspace{3cm}} \\
+        0xFC(,\%rcx,4) & \underline{\hspace{3cm}} & \underline{\hspace{3cm}} \\
+        (\%rax,\%rdx,4) & \underline{\hspace{3cm}} & \underline{\hspace{3cm}} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+%
+Compilers take advantage of \texttt{lea} to perform arithmetic operations. For 
+example, Related Problem 7 demonstrates a case where the use of \texttt{lea} is 
+unrelated to memory addresses but instead serves purely for arithmetic calculations: \\
+\\
+%
+\noindent\textbf{Related Problem 7}
+%
+Consider the following code, in which we have omitted the expression being computed:
+%
+\begin{verbatim}
+long calc(long a, long b, long c) {
+    long result = ____________;
+    return result;
+}
+\end{verbatim}
+%
+Compiling the actual function with \texttt{gcc} yields the following assembly code:
+%
+\begin{verbatim}
+calc:
+    leaq    (%rdi,%rdi,2), %rax
+    leaq    (%rsi,%rax,4), %rax
+    leaq    3(%rax,%rdx), %rax
+    ret
+\end{verbatim}
+%
+\textbf{Fill in the missing expression in the C code above.} \\
+\\
+\textit{Answer: }~\url{https://godbolt.org/z/rT5cYaY6z}
+%
+%% End of file

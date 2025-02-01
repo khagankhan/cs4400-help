@@ -1,0 +1,241 @@
+\section{Simple moves}
+\subsection{Move with different sizes}
+\begin{table}[h]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{l l c c}
+        \toprule
+        \textbf{C declaration} & \textbf{Intel data type} & \textbf{Assembly-code suffix} 
+        & \textbf{Size (bytes)} \\
+        \midrule
+        char/unsigned char     & Byte             & b  & 1 \\
+        short/unsigned short    & Word             & w  & 2 \\
+        int/unsigned int      & Double word      & l  & 4 \\
+        long/unsigned long     & Quad word        & q  & 8 \\
+        char* (or any pointer)  & Quad word        & q  & 8 \\
+        float    & Single precision & s  & 4 \\
+        double   & Double precision & l  & 8 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Sizes of C data types in x86-64. With a 64-bit machine, pointers are 8 bytes long.}
+    \label{tab:c_data_types}
+\end{table}
+
+
+\noindent\textbf{Related Problem 1} (Updated from Practice Problem 3.2)
+
+\vspace{5pt}
+
+For each of the following lines of assembly language, determine the appropriate instruction 
+suffix based on the operands. (For example, \texttt{mov} can be rewritten as \texttt{movb}, 
+\texttt{movw}, \texttt{movl}, or \texttt{movq}.) \\
+%
+\textbf{Hint:} Choose the suffixes that are compatible with the smaller-sized register. You 
+can extract one byte from an 8-byte register, but you cannot extract 8 bytes from a 1-byte 
+register.
+%
+
+\vspace{10pt}
+
+\begin{lstlisting}[basicstyle=\ttfamily, frame=none]
+mov__   %eax, (%rsp)        
+mov__   (%rax), %dx         
+mov__   $0xFF, %bl          
+mov__   (%rsp,%rdx,4), %d1  
+mov__   (%rdx), %rax        
+mov__   %dx, (%rax)        
+\end{lstlisting} 
+%
+\noindent\textbf{Related Problem 2} (Updated from Practice Problem 3.3)
+
+\vspace{5pt}
+%
+Each of the following lines of code generates an error message when we invoke the assembler. 
+Explain what is wrong with each line and write the corrected version.
+%
+\vspace{10pt}
+%
+\begin{lstlisting}[basicstyle=\ttfamily, frame=none]
+movb  $0xF, (%ebx)    | Correct version: 
+movl  %rax, (%rsp)    | Correct version:
+movw  (%rax), 4(%rsp) | Correct version:
+movb  %al, %sl        | Correct version:
+movq  %rax, $0x123    | Correct version:
+movl  %eax, %rdx      | Correct version:
+movb  %si, 8(%rbp)    | Correct version:
+\end{lstlisting}
+%
+\clearpage 
+%
+\subsection{Move with Extensions}
+%
+\begin{table}[t] 
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.1}
+    \begin{tabular}{l l l}
+        \toprule
+        \textbf{Instruction} & \textbf{Effect} & \textbf{Description} \\
+        \midrule
+        \multicolumn{3}{c}{\textbf{Sign-Extending Instructions}} \\
+        \midrule
+        \texttt{movs} $S, R$  & $R \leftarrow \text{SignExtend}(S)$ & Move with sign extension \\
+        \texttt{movsbw} &  & Move sign-extended byte to word \\
+        \texttt{movsbl} &  & Move sign-extended byte to double word \\
+        \texttt{movswl} &  & Move sign-extended word to double word \\
+        \texttt{movsbq} &  & Move sign-extended byte to quad word \\
+        \texttt{movswq} &  & Move sign-extended word to quad word \\
+        \texttt{movslq} &  & Move sign-extended double word to quad word \\
+        \texttt{cltq}   & \%rax $\leftarrow$ SignExtend(\%eax) & Sign-extend \%eax to \%rax \\
+        \midrule
+        \midrule 
+        \multicolumn{3}{c}{\textbf{Zero-Extending Instructions}} \\
+        \midrule
+        \texttt{movz} $S, R$  & $R \leftarrow \text{ZeroExtend}(S)$ & Move with zero extension \\
+        \texttt{movzbw} &  & Move zero-extended byte to word \\
+        \texttt{movzbl} &  & Move zero-extended byte to double word \\
+        \texttt{movzwl} &  & Move zero-extended word to double word \\
+        \texttt{movzbq} &  & Move zero-extended byte to quad word \\
+        \texttt{movzwq} &  & Move zero-extended word to quad word \\
+        \texttt{movzlq (not exist)} &  & \textbf{!!! Why do we not have this?} \\
+        \bottomrule
+    \end{tabular}
+    \caption{Move with extensions. As you notice, we do not have \texttt{movzlq} 
+    because it would be unnecessary based on the following conventions.}
+\end{table}
+%
+\noindent\textbf{Register Updates Based on Data Movement Instructions}
+%
+\vspace{5pt}
+%
+As there are two conventions for data movement, the remaining bytes in the register 
+are affected differently:
+\begin{itemize}
+    \item Instructions generating \textbf{1- or 2-byte} quantities leave the remaining 
+    bytes unchanged.
+    \item Instructions generating \textbf{4-byte} quantities set the upper 4 bytes of 
+    the register to zero.
+\end{itemize}
+%
+\vspace{10pt}
+%
+\begin{lstlisting}[basicstyle=\ttfamily, frame=none, numbers=left, numberstyle=\color{blue}]
+movabsq $0x0011223344556677, %rax    %rax = 0011223344556677
+movb    $-1, %al                     %rax = 00112233445566FF
+movw    $-1, %ax                     %rax = 001122334455FFFF
+movl    $-1, %eax                    %rax = 00000000FFFFFFFF
+movq    $-1, %rax                    %rax = FFFFFFFFFFFFFFFF
+\end{lstlisting}
+%
+That is why \texttt{movl \$-1, \%eax} moves the value to \%eax and automatically 
+\texttt{zero-extends} (zeros out the upper 4 bytes) due to the conventions mentioned 
+above. You may also see \texttt{movl \%eax, \%eax}, which is a simple trick to zero 
+out the upper bytes.\\
+%
+\textbf{FWIW:} Do not worry about \texttt{movabsq \$0x0011223344556677, \%rax}; it is 
+simply used to move very large numbers. When a 64-bit number can be represented as a 
+32-bit value, the compiler uses \texttt{mov}. If it cannot, then it uses \texttt{movabsq}. 
+%
+\texttt{movabsq} can have a register as its destination, but it cannot write directly to memory. 
+See an example here:
+~\url{https://godbolt.org/z/bsvjGsf3G} \\
+\\
+Most of the time you will see \texttt{xorl \%eax, \%eax} that is used to zero out 
+the \texttt{\%rax}. Based on the Table~\ref{truth-table} xoring the same value with 
+itself will result in zero. Since zeroing \texttt{\%eax} also zeros out the upper 4 
+bytes, compiler chooses \texttt{xorl \%eax, \%eax} which is cheaper than \texttt{movq \$0, \%rax} \\
+\\
+%
+\noindent\textbf{Related Problem 3} (Updated from Practice Problem 3.5) \\
+%
+\vspace{5pt}
+%
+You are given the following information. A function with the prototype:
+%
+\begin{lstlisting}[basicstyle=\ttfamily, frame=none]
+void decode(long *xp, long *yp, long *zp);
+\end{lstlisting}
+
+is compiled into assembly code, yielding the following:
+%
+\begin{lstlisting}[basicstyle=\ttfamily, frame=none]
+decode:
+    movq    (%rdi), %r8
+    movq    (%rsi), %rcx
+    movq    (%rdx), %rax
+    movq    %r8, (%rsi)
+    movq    %rcx, (%rdx)
+    movq    %rax, (%rdi)
+    ret
+\end{lstlisting}
+%
+\vspace{5pt}
+%
+Parameters \texttt{xp}, \texttt{yp}, and \texttt{zp} are stored in registers 
+\_\_\_\_, \_\_\_\_, and \_\_\_\_, respectively (Remember calling conventions 
+from~\S\ref{sec: how-args-passed}.)
+%
+\vspace{5pt}
+%
+Write C code for \texttt{decode} that will have an effect equivalent to the 
+assembly code shown.\\
+\begin{lstlisting}[basicstyle=\ttfamily, frame=none]
+// Complete the function below
+void decode(long *xp, long *yp, long *zp) {
+
+
+
+
+
+
+
+}
+\end{lstlisting}
+\textit{Answer: }~\url{https://godbolt.org/z/9G4696P6j} 
+%
+\clearpage
+%
+\noindent\textbf{Related Problem 4} (Updated from Practice Problem 3.4)
+%
+\begin{lstlisting}
+void cast(TYPE_1 *sp, TYPE_2 *dp) {
+    *dp = (TYPE_2) *sp;
+}
+\end{lstlisting}
+%
+You are given this function that casts a source value (\texttt{*sp}) and writes it 
+to a destination (\texttt{*dp}). Write the instructions necessary to perform the same 
+operation with different \texttt{TYPE\_1} and \texttt{TYPE\_2}. An example is provided for you.
+%
+\textbf{Remember:}
+\begin{itemize}
+    \item \textbf{You cannot move from memory to memory.}
+    \item When performing a cast that involves both a \textbf{size change} and a 
+    \textbf{change of signedness} in C, the operation should change the size first.
+\end{itemize}
+%
+\vspace{10pt}
+%
+\begin{table}[h]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.4} % Adjusts row height for two lines
+    \begin{tabular}{l l p{5cm}} % p{5cm} allows two-line content
+        \toprule
+        \textbf{TYPE\_1} & \textbf{TYPE\_2} & \textbf{Instruction} \\
+        \midrule
+        long & long & \texttt{movq (\%rdi), \%rax} \newline \texttt{movq \%rax, (\%rsi)} \\
+        char & int & \underline{\hspace{5cm}} \newline \underline{\hspace{5cm}} \\
+        char & unsigned & \underline{\hspace{5cm}} \newline \underline{\hspace{5cm}} \\
+        unsigned char & long & \underline{\hspace{5cm}} \newline \underline{\hspace{5cm}} \\
+        int & char & \underline{\hspace{5cm}} \newline \underline{\hspace{5cm}} \\
+        unsigned & unsigned char & \underline{\hspace{5cm}} \newline \underline{\hspace{5cm}} \\
+        char & short & \underline{\hspace{5cm}} \newline \underline{\hspace{5cm}} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+\textit{Answer:} \url{https://godbolt.org/z/ePox4Y7sv}
+\clearpage
+%
+%% End of file

@@ -1,0 +1,114 @@
+\section{Register info}
+\label{sec:reg-info}
+\renewcommand{\arraystretch}{1.5}
+\setlength{\tabcolsep}{8pt}
+%
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|c|l|}
+        \hline
+        \multicolumn{4}{|c|}{\textbf{Bit Ranges}} & \multirow{2}{*}{\textbf{Description}} \\
+        \cline{1-4}
+        63 & 31 & 15 & 7 &  \\
+        \hline
+        \%rax  & \%eax  & \%ax  & \%al  & Return value \\
+        \%rbx  & \%ebx  & \%bx  & \%bl  & Callee saved \\
+        \%rcx  & \%ecx  & \%cx  & \%cl  & 4th argument \\
+        \%rdx  & \%edx  & \%dx  & \%dl  & 3rd argument \\
+        \%rsi  & \%esi  & \%si  & \%sil & 2nd argument \\
+        \%rdi  & \%edi  & \%di  & \%dil & 1st argument \\
+        \%rbp  & \%ebp  & \%bp  & \%bpl & Callee saved \\
+        \%rsp  & \%esp  & \%sp  & \%spl & Stack pointer \\
+        \%r8   & \%r8d  & \%r8w  & \%r8b  & 5th argument \\
+        \%r9   & \%r9d  & \%r9w  & \%r9b  & 6th argument \\
+        \%r10  & \%r10d & \%r10w & \%r10b & Caller saved \\
+        \%r11  & \%r11d & \%r11w & \%r11b & Caller saved \\
+        \%r12  & \%r12d & \%r12w & \%r12b & Callee saved \\
+        \%r13  & \%r13d & \%r13w & \%r13b & Callee saved \\
+        \%r14  & \%r14d & \%r14w & \%r14b & Callee saved \\
+        \%r15  & \%r15d & \%r15w & \%r15b & Callee saved \\
+        \hline
+    \end{tabular}
+    \caption{Breakdown of x86-64 General Purpose Registers. Remember, the register itself is 64 bits wide (0–63). Certain portions of it have specific names. We do not have separate registers for 64-bit \%rax, 32-bit \%eax, etc. Instead, there is a single 64-bit \%rax register, and its lower 32 bits are referred to as \%eax.}
+    \label{tab:x86_64_registers}
+\end{table}
+%
+\clearpage
+%
+\subsection{Calling Conventions - How parameters are passed to a function}
+%
+\label{sec: how-args-passed}
+The arguments are passed to a function using the registers:
+\begin{verbatim}
+    %rdi, %rsi, %rdx, %rcx, %r8, %r9
+\end{verbatim}
+or by using other parts of these registers, such as \texttt{\%edi, \%esi, ...} or 
+\texttt{\%dil, \%sil, ...}, depending on the size of the value. If there are more 
+than six arguments, the additional arguments are stored on the stack. \\
+See an example here:~\url{https://godbolt.org/z/Yesv1Mo9d} \\
+%
+\subsection{Calling Conventions - Callee and Caller saved registers}
+\label{sec: calle-caller-regs}
+%
+The ABI~\cite{x86-64-ABI} defines callee-saved registers as \\
+\\
+%
+\textit{A function can use one of these registers if it saves it first. The function 
+must restore the register’s original value before exiting.} \\
+\\
+%
+This means that the value of the register must be restored; in other words, it must 
+have the same value before and after a function call.  \\
+%
+\noindent For example:
+\begin{verbatim}
+mov $0, %rbp    # %rbp has value 0
+call fun_uses_rbp()
+cmpq $0, %rbp   # %rbp still has the same value 0.
+\end{verbatim}
+%
+Since \texttt{\%rbp} is callee-saved, the function \texttt{fun\_uses\_rbp()} can use
+ \texttt{\%rbp}, but it must restore the previous value before exiting. That is why 
+ \texttt{\%rbp} has the same value (0) before and after the call to \texttt{fun\_uses\_rbp()}. \\
+%
+On the other hand, caller-saved (or \textbf{not} callee-saved) registers may have different
+ values before and after a function call. The callee function is not responsible for saving
+  or restoring their values; instead, the caller function must save their values if they are
+   needed after the function call. \\
+%
+\noindent For example:
+\begin{verbatim}
+mov $0, %rax    # %rax has value 0
+call fun_uses_rax()
+cmpq $0, %rax   # %rax can have a different value 
+\end{verbatim}
+%
+Since \texttt{\%rax} is not callee-saved, the function \texttt{fun\_uses\_rax()} is not 
+responsible for restoring its previous value. As a result, \texttt{\%rax} may hold a different 
+value after the function call.
+%
+\subsection{Calling Conventions - More information}
+Register \texttt{\%rax} holds the return value. \\
+\noindent For example, for the following C code:
+\begin{verbatim}
+long multiply(long a, long b) {
+    long return_value = a * b;
+    return return_value;
+}
+\end{verbatim}
+\noindent the following assembly code has been generated:
+\begin{verbatim}
+multiply:
+        movq    %rdi, %rax
+        imulq   %rsi, %rax
+        ret
+\end{verbatim}
+%
+As you can see, \texttt{\%rax} is used as the register that is returned in the end. \\
+%
+See the code here:~\url{https://godbolt.org/z/EjsPf5r7o} \\
+\\
+%
+Register \texttt{\%rsp} is used as the stack pointer, a pointer to the topmost element in the
+ stack.
+\clearpage

@@ -1,0 +1,541 @@
+\section{Control}
+\subsection{Setting flags}
+In addition to the integer registers, the CPU maintains a set of single-bit 
+\textit{condition code} registers describing attributes of the most recent arithmetic 
+or logical operation.
+The \texttt{leaq} instruction does not alter any condition codes, since it 
+is intended to be used in address computations. Otherwise, all of the instructions 
+listed in Table~\ref{basic-arith} cause the condition codes to be set.
+In addition to the instructions in the Table~\ref{basic-arith} there are 
+two instruction classes (having 8-, 16-, 32-, and 64-bit forms) that set 
+condition codes without altering any other registers: \texttt{cmp} and \texttt{test}:
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Instruction} & \textbf{Based on} & \textbf{Description} \\
+        \midrule
+        \texttt{CMP}  & $S_1, S_2$ \quad $S_2 - S_1$ & Compare \\
+        \quad \texttt{cmpb} & & Compare byte \\
+        \quad \texttt{cmpw} & & Compare word \\
+        \quad \texttt{cmpl} & & Compare double word \\
+        \quad \texttt{cmpq} & & Compare quad word \\
+        \midrule
+        \texttt{TEST} & $S_1, S_2$ \quad $S_1 \& S_2$ & Test \\
+        \quad \texttt{testb} & & Test byte \\
+        \quad \texttt{testw} & & Test word \\
+        \quad \texttt{testl} & & Test double word \\
+        \quad \texttt{testq} & & Test quad word \\
+        \bottomrule
+    \end{tabular}
+    \caption{Comparison and test instructions. These instructions set the 
+    condition codes without updating any other registers.}
+    \label{tab:cmp_test_instructions}
+\end{table}
+%
+As you notice, \texttt{cmp} and \texttt{test} use \textit{subtraction} 
+and \textit{and}, respectively. But what makes them different from the 
+corresponding \textit{sub} and \textit{and} instructions in Table~\ref{basic-arith} 
+is that \texttt{cmp} and \texttt{test} \textbf{DO NOT UPDATE THE VALUE IN THE DESTINATION 
+REGISTER}; they just set the flags.\\
+%
+See the following example.
+\\
+\begin{tabular}{l l}
+\texttt{movq \$5, \%rax}   & \texttt{movq \$5, \%rax}   \\
+\texttt{movq \$2, \%rbx}   & \texttt{movq \$2, \%rbx}   \\
+\texttt{subq \%rax, \%rbx} & \texttt{cmpq \%rax, \%rbx} \\ 
+\texttt{\# \%rbx = \%rbx - \%rax} & \texttt{\# \%rbx - \%rax, only sets flags} \\ 
+                                & \texttt{\# not assigns val to \%rbx} \\ 
+\\
+\textbf{After Execution (subq):}  & \textbf{After Execution (cmpq):}  \\
+\texttt{\# \%rax = 5}      & \texttt{\# \%rax = 5}      \\
+\texttt{\# \%rbx = -3}     & \texttt{\# \%rbx = 2  (unchanged)} \\
+\texttt{\# SF = 1 (negative result)} & \texttt{\# SF = 1 (negative result)}
+\end{tabular}
+\\
+\\
+This demonstrates that while \texttt{subq} updates the destination 
+register (\%rbx), \texttt{cmpq} performs the same subtraction but 
+only modifies the processor flags without changing the register contents. 
+The same idea holds true for the \texttt{test} instruction, too.
+
+
+For example, suppose the \texttt{cmpl a b} instruction to perform that 
+does \texttt{b - a}, where variables \texttt{a}, \texttt{b} are integers. 
+Then the condition codes would be set according to the following C-like expressions:
+
+\begin{Verbatim}[frame=single]
+CF  (unsigned) b < (unsigned) a                Unsigned overflow
+ZF  (b == a)                                   Zero
+SF  ((b - a) < 0)                              Negative
+OF  (a < 0 && b > 0 && (b - a) < 0) || 
+    (a > 0 && b < 0 && (b - a) > 0)            Signed overflow
+\end{Verbatim}
+\noindent\textbf{\textcolor{red}{Note:}} \\
+Please consider the above as a "C-like expression" rather than actual C code. 
+The authors of the CSAPP book~\cite{bryant2016csapp} may have mistakenly applied a similar logic to C code. For more 
+details, please refer to \texttt{Lec04.pdf}, slide number 83, and Solution 2.30
+from the book of the mentioned edition in the Acknowledgment~\S\ref{sec:ack}. \\
+\\
+\noindent\textbf{Related Problem 8} \\
+It is easier to see a concept in smaller numbers, so we first consider 4-bit 
+values for condition codes. The concept is the same, since 4-bit range is 
+smaller it makes things easier. \\
+
+For example: 
+\begin{itemize}
+    \item \textbf{For 4-bit integers:}
+    \begin{itemize}
+        \item Unsigned values range from $0$ to $2^4 - 1 = 15$.
+        \item Signed values range from $-2^3 = -8$ to $2^3 - 1 = 7$.
+    \end{itemize}
+    \item The same logic applies to 32-bit integers, except that:
+    \begin{itemize}
+        \item Unsigned values range from $0$ to $2^{32} - 1$.
+        \item Signed values range from $-2^{31}$ to $2^{31} - 1$.
+    \end{itemize}
+\end{itemize}
+
+\begin{table}[h]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Binary} & \textbf{Unsigned Value (0 to 15)} & \textbf{Signed Value (-8 to 7)} \\
+        \hline
+        0000 & 0  & 0  \\
+        0001 & 1  & 1  \\
+        0010 & 2  & 2  \\
+        0011 & 3  & 3  \\
+        0100 & 4  & 4  \\
+        0101 & 5  & 5  \\
+        0110 & 6  & 6  \\
+        0111 & 7  & 7  \\
+        1000 & 8  & -8 \\
+        1001 & 9  & -7 \\
+        1010 & 10 & -6 \\
+        1011 & 11 & -5 \\
+        1100 & 12 & -4 \\
+        1101 & 13 & -3 \\
+        1110 & 14 & -2 \\
+        1111 & 15 & -1 \\
+        \hline
+    \end{tabular}
+    \caption{4-bit Unsigned and Signed Integer Representation}
+    \label{four-bit-int}
+\end{table}
+
+
+Given two \textbf{4-bit numbers} (Use Table~\ref{four-bit-int} as a reference) 
+$a$ and $b$ in two’s complement representation:
+
+\begin{enumerate}
+    \item $a = 5$, $b = 3$
+    \item $a = 7$, $b = -6$
+    \item $a = -8$, $b = 7$
+    \item $a = -3$, $b = -5$
+    \item $a = -8$, $b = -8$
+\end{enumerate}
+
+For each case, compute the result of \texttt{cmp a b} and determine 
+the values of the following flags: \textbf{CF, ZF, SF, OF} \\
+\\
+%
+\clearpage
+%
+\noindent\textbf{Related Problem 9}  \\
+%
+From \textbf{Related Problem 8}, for each case, compute the result of 
+\texttt{add a b} (Use Table~\ref{four-bit-int} as a reference) and determine 
+the values of the same flags (In the \textbf{Related Problem 8} you used the 
+conditions for \texttt{cmp a b} now you are supposed to work with \texttt{add a b}.) \\ 
+First, try to write C-like expressions for \texttt{add a b} for the given flags: \\
+%
+\begin{Verbatim}[frame=single]
+CF                                             Unsigned overflow
+ZF                                             Zero
+SF                                             Negative
+OF   
+                                               Signed overflow
+\end{Verbatim}
+
+Then, determine the value of the flags after the operation \texttt{add a, b} 
+for the following (Numbers are still \textbf{4-bit numbers}): \\
+\begin{enumerate}
+    \item $a = 5$, $b = 3$
+    \item $a = 7$, $b = -6$
+    \item $a = -8$, $b = 7$
+    \item $a = -3$, $b = -5$
+    \item $a = -8$, $b = -8$
+\end{enumerate}
+
+\noindent\textbf{Note:}  
+
+As discussed in the lecture, Prof. Dr. Regehr suggested a simpler approach to handling flags: \\
+\\
+\textit{Cast register values to a signed 64-bit integer type, perform the arithmetic 
+operation, and then compare the result against \texttt{INT\_MIN} and \texttt{INT\_MAX}. 
+However, ensure that when casting to the larger type, the conversion correctly 
+sign-extends rather than zero-extends.} \\
+\\
+This approach may be easier to implement. You can apply the same concept to the 
+above Related Problems (Related Problem 8 and Related Problem 9). Since the numbers 
+in those problems are 4-bit values, you can extend them to 8-bit and perform the 
+comparison accordingly.
+%
+\clearpage
+%
+\subsection{Usage of Flags}
+%
+Now that we understand how flags are set, what do these flags actually signify? Their usage can be categorized into three main operations:
+%
+\begin{enumerate}
+    \item Setting a single byte to \texttt{0} or \texttt{1} based on a specific 
+    combination of condition codes (\texttt{SET} instructions are used).
+    \item Conditionally jumping to another part of the program (\texttt{JMP} 
+    instructions are used).
+    \item Conditionally transferring data (\texttt{CMOV} instructions are used.)
+\end{enumerate}
+%
+Please see Table~\ref{set-and-jmp} for the conditions of the operations 
+listed above. As you can see, they use the same suffixes, which change 
+based on whether the values are signed or unsigned. The suffixes \textbf{a} 
+(above) and \textbf{b} (below) are used for unsigned values, while the suffixes 
+\textbf{g} (greater) and \textbf{l} (less) are used for signed values. 
+These suffixes determine how different flag combinations affect the result. 
+%
+Additionally, please familiarize yourself with the truth tables for XOR, 
+OR, NOT, and AND operations, as shown in Table~\ref{truth-table}, if you 
+are not already familiar with them.
+%
+\begin{table}[h]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{c c | c c c c c}
+        \toprule
+        $A$ & $B$ & $A \& B$ & $A | B$ & $A \texttt{\string^} B$ & $\sim A$ & $\sim B$ \\
+        \midrule
+        0 & 0 & 0 & 0 & 0 & 1 & 1 \\
+        0 & 1 & 0 & 1 & 1 & 1 & 0 \\
+        1 & 0 & 0 & 1 & 1 & 0 & 1 \\
+        1 & 1 & 1 & 1 & 0 & 0 & 0 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Truth table for AND ( $\&$ ), OR ( $|$ ), XOR ( \texttt{\string^} ), and NOT ( $\sim$ ).}
+    \label{truth-table}
+\end{table}
+
+\clearpage
+\begin{table}[h]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{l l l l}
+        \toprule
+        \textbf{Instruction} & \textbf{Synonym} & \textbf{Effect} & \textbf{Condition} \\
+        \midrule
+        \multicolumn{4}{c}{\textbf{Set Instructions}} \\
+        \midrule
+        \texttt{sete} $D$  & \texttt{setz} $D$  & $D \leftarrow 
+        ZF$ & Equal / zero \\
+        \texttt{setne} $D$  & \texttt{setnz} $D$  & $D \leftarrow 
+        \sim ZF$ & Not equal / not zero \\
+        \texttt{sets} $D$  & – & $D \leftarrow SF$ & Negative \\
+        \texttt{setns} $D$  & – & $D \leftarrow \sim SF$ & Nonnegative \\
+        \texttt{setg} $D$  & \texttt{setnle} $D$  & $D \leftarrow 
+        \sim (SF \texttt{\string^} OF) \& \sim ZF$ & Greater (signed $>$) \\
+        \texttt{setge} $D$  & \texttt{setnl} $D$  & $D \leftarrow 
+        \sim (SF \texttt{\string^} OF)$ & Greater or equal (signed $\geq$) \\
+        \texttt{setl} $D$  & \texttt{setnge} $D$  & $D \leftarrow 
+        SF \texttt{\string^} OF$ & Less (signed $<$) \\
+        \texttt{setle} $D$  & \texttt{setng} $D$  & $D \leftarrow 
+        (SF \texttt{\string^} OF) | ZF$ & Less or equal (signed $\leq$) \\
+        \texttt{seta} $D$  & \texttt{setnbe} $D$  & $D \leftarrow 
+        \sim CF \& \sim ZF$ & Above (unsigned $>$) \\
+        \texttt{setae} $D$  & \texttt{setnb} $D$  & $D \leftarrow 
+        \sim CF$ & Above or equal (unsigned $\geq$) \\
+        \texttt{setb} $D$  & \texttt{setnae} $D$  & $D \leftarrow 
+        CF$ & Below (unsigned $<$) \\
+        \texttt{setbe} $D$  & \texttt{setna} $D$  & $D \leftarrow 
+        CF | ZF$ & Below or equal (unsigned $\leq$) \\
+        \midrule
+        \multicolumn{4}{c}{\textbf{Jump Instructions}} \\
+        \midrule
+                \texttt{jmp} \textit{Label}  & – & Unconditional jump & – \\
+        \texttt{je} \textit{Label}  & \texttt{jz} \textit{Label} & Jump if 
+        $ZF = 1$ & Equal / zero \\
+        \texttt{jne} \textit{Label}  & \texttt{jnz} \textit{Label} & Jump if 
+        $ZF = 0$ & Not equal / not zero \\
+        \texttt{js} \textit{Label}  & – & Jump if 
+        $SF = 1$ & Negative \\
+        \texttt{jns} \textit{Label}  & – & Jump if 
+        $SF = 0$ & Nonnegative \\
+        \texttt{jg} \textit{Label}  & \texttt{jnle} \textit{Label} & Jump if 
+        $\sim (SF \texttt{\string^} OF) \& \sim ZF$ & Greater (signed $>$) \\
+        \texttt{jge} \textit{Label}  & \texttt{jnl} \textit{Label} & Jump if 
+        $\sim (SF \texttt{\string^} OF)$ & Greater or equal (signed $\geq$) \\
+        \texttt{jl} \textit{Label}  & \texttt{jnge} \textit{Label} & Jump if 
+        $SF \texttt{\string^} OF$ & Less (signed $<$) \\
+        \texttt{jle} \textit{Label}  & \texttt{jng} \textit{Label} & Jump if 
+        $(SF \texttt{\string^} OF) | ZF$ & Less or equal (signed $\leq$) \\
+        \texttt{ja} \textit{Label}  & \texttt{jnbe} \textit{Label} & Jump if 
+        $\sim CF \& \sim ZF$ & Above (unsigned $>$) \\
+        \texttt{jae} \textit{Label}  & \texttt{jnb} \textit{Label} & Jump if 
+        $\sim CF$ & Above or equal (unsigned $\geq$) \\
+        \texttt{jb} \textit{Label}  & \texttt{jnae} \textit{Label} & Jump if 
+        $CF$ & Below (unsigned $<$) \\
+        \texttt{jbe} \textit{Label}  & \texttt{jna} \textit{Label} & Jump if 
+        $CF | ZF$ & Below or equal (unsigned $\leq$) \\
+        \midrule
+        \multicolumn{4}{c}{\textbf{Cmove Instructions}} \\
+        \midrule
+        \texttt{cmove} $S, R$  & \texttt{cmovz} & Move if $ZF = 1$ 
+        & Equal / zero \\
+        \texttt{cmovne} $S, R$  & \texttt{cmovnz} & Move if $ZF = 0$ 
+        & Not equal / not zero \\
+        \texttt{cmovs} $S, R$  & – & Move if $SF = 1$ 
+        & Negative \\
+        \texttt{cmovns} $S, R$  & – & Move if $SF = 0$ 
+        & Nonnegative \\
+        \texttt{cmovg} $S, R$  & \texttt{cmovnle} & Move if $\sim (SF \texttt{\string^} OF) \& \sim ZF$ 
+        & Greater (signed $>$) \\
+        \texttt{cmovge} $S, R$  & \texttt{cmovnl} & Move if $\sim (SF \texttt{\string^} OF)$ 
+        & Greater or equal (signed $\geq$) \\
+        \texttt{cmovl} $S, R$  & \texttt{cmovnge} & Move if $SF \texttt{\string^} OF$ & Less (signed $<$) \\
+        \texttt{cmovle} $S, R$  & \texttt{cmovng} & Move if $(SF \texttt{\string^} OF) | ZF$ 
+        & Less or equal (signed $\leq$) \\
+        \texttt{cmova} $S, R$  & \texttt{cmovnbe} & Move if $\sim CF \& \sim ZF$ 
+        & Above (unsigned $>$) \\
+        \texttt{cmovae} $S, R$  & \texttt{cmovnb} & Move if $\sim CF$ 
+        & Above or equal (unsigned $\geq$) \\
+        \texttt{cmovb} $S, R$  & \texttt{cmovnae} & Move if $CF$ 
+        & Below (unsigned $<$) \\
+        \texttt{cmovbe} $S, R$  & \texttt{cmovna} & Move if $CF | ZF$ 
+        & Below or equal (unsigned $\leq$) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Conditional set, move, and jump instructions in x86-64. These instructions 
+    depend on condition flags set by previous arithmetic or logical operations.}
+    \label{set-and-jmp}
+\end{table}
+
+\clearpage
+\noindent Time for the problems: \\
+\\
+\noindent\textbf{Related Problem 10}  \\
+Given the C code:
+\begin{verbatim}
+int comp(TYPE a, TYPE b) {
+    return a COMP b;
+}
+\end{verbatim}
+The code above shows a general comparison between arguments a and b
+where TYPE  is the data type of the arguments.
+
+For each of the following instruction sequences, determine which data 
+types TYPE and which comparisons COMP could cause the compiler to 
+generate this code. (There can be multiple correct answers; you should 
+list them all.)
+\noindent Instruction Sequence:
+\begin{verbatim}
+cmpl    %esi, %edi
+setl    %al
+movzbl  %al, %eax
+ret
+----------------------------------
+cmpw    %si, %di
+setge   %al
+movzbl  %al, %eax
+ret
+----------------------------------
+cmpb    %dil, %sil
+setnb   %al
+movzbl  %al, %eax
+ret
+----------------------------------
+cmpq    %rsi, %rdi
+setne   %al
+movzbl  %al, %eax
+ret
+\end{verbatim}
+
+\noindent\textit{Answer: }~\url{https://godbolt.org/z/ndrn6bqWY} \\
+\\
+\noindent\textbf{Related Problem 11}  \\
+Given the C code:
+\begin{verbatim}
+int test(TYPE a) {
+    return a COMP 0;
+}
+\end{verbatim}
+The code above shows a general comparison between arguments a and b where TYPE is 
+the data type of the arguments.
+
+\noindent For each of the following instruction sequences, determine which data 
+types TYPE and which comparisons COMP could cause the compiler to 
+generate this code. (There can be multiple correct answers; you should 
+list them all.)
+
+\noindent Instruction Sequence:
+\begin{verbatim}
+testq   %rdi, %rdi
+setle   %al
+movzbl  %al, %eax
+ret
+----------------------------------
+testw   %di, %di
+sete    %al
+movzbl  %al, %eax
+ret
+\end{verbatim}
+
+\noindent\textit{Answer: }~\url{https://godbolt.org/z/5s5ffGPz5} \\
+\\
+\noindent\textbf{Related Problem 12} (Updated from Practice Problem 3.18) \\
+
+Complete the C code below based on the assembly code provided after the C code.
+
+\begin{verbatim}
+long test(long x, long y, long z) {
+    long val = __________;
+    if (__________) {
+        if (__________)
+            val = __________;
+        else
+            val = __________;
+    } else if (__________)
+        val = __________;
+    return val;
+}
+\end{verbatim}
+GCC generates the following assembly code. Based on this assembly code complete 
+the C code above.
+\begin{verbatim}
+test:
+        leaq    (%rdx,%rsi), %rax
+        movq    %rax, %rcx
+        subq    %rdi, %rcx
+        cmpq    $5, %rdx
+        jle     .L2
+        cmpq    $2, %rsi
+        jle     .L3
+        movq    %rdi, %rax
+        subq    %rdx, %rax
+        ret
+.L3:
+        movq    %rsi, %rax
+        imulq   %rdi, %rax
+        ret
+.L2:
+        cmpq    $2, %rdx
+        jle     .L1
+        movq    %rcx, %rax
+.L1:
+        ret
+\end{verbatim}
+
+\noindent\textit{Answer: }~\url{https://godbolt.org/z/TWezeEM6d} \\
+\\
+As we know, \texttt{jmp} instructions are used for loops since there are no 
+explicit loop instructions at the assembly level:
+
+\begin{enumerate}
+    \item Compare the condition (check loop condition).
+    \item If the condition is not met, jump back to the loop body.
+    \item If the condition is met, do not jump back and execute the instructions 
+    after the jump (execute code after the loop body).
+\end{enumerate}
+
+
+\noindent\textbf{Related Problem 13} \\
+\begin{verbatim}
+For C code having the general form:
+
+long loop(long a, long b)
+{
+    long result = __________;
+    while (__________) {
+        result = __________;
+        b = __________;
+    }
+    return result;
+}
+\end{verbatim}
+
+\begin{verbatim}
+loop:
+        leaq    (%rsi,%rsi,2), %rax
+        addq    %rdi, %rax
+        jmp     .L2
+.L3:
+        addq    %rdi, %rax
+        addq    $1, %rsi
+.L2:
+        cmpq    $10, %rsi
+        jg      .L3
+        ret
+\end{verbatim} 
+
+\noindent\textit{Answer: }~\url{https://godbolt.org/z/q7c1e45Mb} \\
+\\
+\noindent\textbf{Related Problem 14} \\
+For the following C code
+\begin{verbatim}
+    long modify_long(long a) {
+    if (a > 6 || a < 0) {
+            a = a + 3;
+    } else {
+        a = a + 5;
+    }
+    return a;
+}
+\end{verbatim}
+GCC generates the following assembly code with \texttt{-Og} flag:
+\begin{verbatim}
+    modify_long:
+        cmpq    $6, %rdi
+        jbe     .L2
+        leaq    3(%rdi), %rax
+        ret
+.L2:
+        leaq    5(%rdi), %rax
+        ret
+\end{verbatim}
+
+You can see it here: \textit{https://godbolt.org/z/zdqTv8YWK} \\
+\\
+As you can see, after \texttt{cmpq \$6, \%rdi} compiler uses \textit{jbe    .L2} 
+instruction.  However, as we know ftom Table~\ref{set-and-jmp} that \texttt{jbe} instruction 
+is used for unsigned values while in our C code the type of \texttt{a} is \texttt{long} which 
+is signed. \\
+\\
+Explain why compiler uses \texttt{jbe} even if the value is signed. \\
+\\
+\textbf{Hint:} Everything is just bits for the computer. See an example bit 
+patterns for signed and unsigned values in the Table~\ref{four-bit-int}. \\
+\\
+\noindent\textbf{Related Problem 14} \\
+For the C code below:
+\begin{verbatim}
+    long cmove(long a, long b) {
+        if (_) {
+            return _____;
+        } else {
+            return _____;
+        }
+}
+\end{verbatim}
+The compiler generates the following assembly code: 
+\begin{verbatim}
+    cmove:
+        leaq    (%rdi,%rsi), %rax
+        addq    $3, %rsi
+        testq   %rdi, %rdi
+        cmove   %rsi, %rax
+        ret
+\end{verbatim}
+Based on the assembly code, complete the given C code. \\
+
+\noindent\textit{Answer: }~\url{https://godbolt.org/z/3GWE8bves} \\

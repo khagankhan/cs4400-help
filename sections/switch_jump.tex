@@ -1,0 +1,139 @@
+\section{Switch case and Jump tables}
+Compilers translate \texttt{switch} statements into \textbf{jump tables} when cases are dense. 
+The best way is to look at an example. 
+\\
+For the given example below, instead of multiple comparisons, an index (\texttt{n - 100}) maps directly to an entry in \texttt{.L4}. For example, \texttt{case 104:} lacks a \texttt{break}, so it \textbf{falls through} to \texttt{case 106:}, meaning both use the same \texttt{.L3} label in assembly. The \textbf{default case} is \texttt{.L8}, where out-of-range values jump, setting \texttt{x = 0}. \textbf{Bias correction} is needed because \texttt{switch} cases may not start at 0; the compiler subtracts 100 (\texttt{subq \$100, \%rsi}) to normalize indexing, ensuring efficient lookups in the jump table; so the index may start from zero not from 100. \\
+\\
+Please carefully examine the following example, click the \textit{Compiler Explorer link }(\url{https://godbolt.org/z/EoPx6zooT}) and play with the source code to see how it compiles to a jump table. \\
+
+\begin{verbatim}
+void switch_case(long x, long n, long *dest)
+{
+    switch (n) {
+        case 100: //  .L7
+            x += 1;
+            break;
+        // Missing case 101: goes to default .L8
+        case 102: // quad .L6
+            x += 2;
+            break;
+        case 103: // .L5
+            x += 3;
+            break;
+        case 104:
+            /* Fall through  to case 106: which is .L3 */
+        // Missing case 105: gos to default .L8
+        case 106: // .L3
+            x += 4;
+            break;
+        default:
+            x = 0;
+    }
+    *dest = x;
+}
+\end{verbatim}
+The code above compiles to:
+\begin{verbatim}
+ switch_case:
+        subq    $100, %rsi    # Add bias so it starts from 0: 
+        cmpq    $6, %rsi      # Max case number 106 now is 6;
+                              # 6 = 106- 100 because of above bias
+        ja      .L8           # If more than 6 jump to default case .L8
+        jmp     *.L4(,%rsi,8) # Otherwise jump to the table to select
+.L4:
+        .quad   .L7 # Case 100 jumps to .L7
+        .quad   .L8 # Case 101 is missing; jmp to default
+        .quad   .L6 # Case 102 jumps to .L6
+        .quad   .L5 # Case 103 jumps to .L5
+        .quad   .L3 # Case 104 falls through to case 6
+        .quad   .L8 # Case 105 is missing; jmp to default
+        .quad   .L3 # Case 106 jumps to .L3 like case 104 did because of fall through
+.L7:
+        addq    $1, %rdi     # x+= 1;
+        jmp     .L2
+.L6:
+        addq    $2, %rdi     # x+= 2;
+        jmp     .L2
+.L5:
+        addq    $3, %rdi     # x+= 3;
+        jmp     .L2
+.L3:
+        addq    $4, %rdi     # x+= 4;
+.L2:
+        movq    %rdi, (%rdx) # *dest = x;
+        ret
+.L8:
+        movl    $0, %edi     # x = 0;
+        jmp     .L2
+\end{verbatim}
+
+See the source code here: \url{https://godbolt.org/z/EoPx6zooT} \\
+\\
+\clearpage
+\noindent\textbf{Related Problem 15} \\
+The \texttt{switch\_case} example above specifies that any value less than zero must go to the default case. However, there is no explicit handling of negative values in the assembly code. 
+
+Explain how the assembly code handles these cases.\\ 
+\\
+\noindent\textbf{Related Problem 16} (Updated from Practice Problem 3.31) \\
+Complete the following C code based on the assembly code given.\\
+The given C code
+\begin{verbatim}
+    void switcher(long a, long b, long c, long *dest)
+{
+    long val;
+    switch(a) {
+    case ___:
+        c = ___;
+        break;
+    case ___:
+        val = ___;
+        break;
+    case ___:
+        /* Fall through */
+    case ___:
+        val = ___;
+        break;
+    case ___:
+        val = ___;
+        break;
+    default:
+        val = ___; 
+    }
+    *dest = val; 
+}
+\end{verbatim}
+compiles to the following assembly code:
+\begin{verbatim}
+    switcher:
+        cmpq    $7, %rdi
+        ja      .L5
+        jmp     *.L4(,%rdi,8)
+.L4:
+        .quad   .L7
+        .quad   .L5
+        .quad   .L3
+        .quad   .L5
+        .quad   .L6
+        .quad   .L8
+        .quad   .L5
+        .quad   .L3
+.L6:
+        movq    %rdi, %rsi
+        jmp     .L5
+.L7:
+        leaq    112(%rdx), %rsi
+        jmp     .L5
+.L3:
+        addq    %rdx, %rsi
+        salq    $2, %rsi
+.L5:
+        movq    %rsi, (%rcx)
+        ret
+.L8:
+        movl    $0, %esi
+        jmp     .L5
+\end{verbatim}
+
+\textit{Answer: }\url{https://godbolt.org/z/cnaGd5no3}
+\clearpage
